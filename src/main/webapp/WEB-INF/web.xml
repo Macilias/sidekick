@@ -26,11 +26,11 @@
 	</filter>
 
 	<filter>
-		<filter-name>api.version_1</filter-name>
-		<filter-class>com.macilias.apps.controller.Api_v1</filter-class>
+		<filter-name>sidekick.api.v1</filter-name>
+		<filter-class>com.macilias.apps.controller.SidekickAPI_v1</filter-class>
 		<init-param>
 			<param-name>applicationClassName</param-name>
-			<param-value>com.macilias.apps.controller.Api_v1</param-value>
+			<param-value>com.macilias.apps.controller.SidekickAPI_v1</param-value>
 		</init-param>
 	</filter>
 
@@ -40,8 +40,8 @@
 	</filter-mapping>
 
 	<filter-mapping>
-		<filter-name>api.version_1</filter-name>
-		<url-pattern>/api/*</url-pattern>
+		<filter-name>sidekick.api.v1</filter-name>
+		<url-pattern>/sidekick/api/v1/*</url-pattern>
 	</filter-mapping>
 
 </web-app>

@@ -3,8 +3,9 @@ package com.macilias.apps.controller;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.macilias.apps.model.*;
-import com.macilias.apps.service.crowdtangle.Client;
-import com.macilias.apps.service.crowdtangle.Service;
+import com.macilias.apps.service.Service;
+import com.macilias.apps.service.crowdtangle.CrowdTangleService;
+import com.macilias.apps.service.facebook.FacebookService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
@@ -18,21 +19,51 @@ import java.util.*;
  *
  * @author maciej.niemczyk@voipfuture.com
  */
-public class Api_v1 implements Filter {
+public class SidekickAPI_v1 implements Filter {
 
-    private static final Logger LOG = Logger.getLogger(Api_v1.class);
+    private static final Logger LOG = Logger.getLogger(SidekickAPI_v1.class);
     private static final String INTENT = "Intent";
     private final History history = new History();
-    private Service service;
+    private Service crowdTangleService;
+    private Service facebookService;
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        service = new Service(new Client(Settings.CROWD_TANGLE_API_TOKEN), Settings.CROWD_TANGLE_LIST_ID);
+        LOG.debug("init() " + filterConfig);
     }
 
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         LOG.info("request(): " + servletRequest.getLocalAddr());
+        Request request = parseRequest(servletRequest);
+
+        Response response = createResponse(request);
+        request.setResponse(response);
+        history.addRequest(request);
+
+        LOG.info("request  as String: " + request);
+        LOG.info("response as String: " + response);
+        Gson gson = new GsonBuilder().create();
+        servletResponse.setContentType("application/json");
+        String responseAsJSON = gson.toJson(response);
+        servletResponse.getOutputStream().println(responseAsJSON);
+    }
+
+    private Service getCrowdTangleService() {
+        if (crowdTangleService == null) {
+            crowdTangleService = new CrowdTangleService();
+        }
+        return crowdTangleService;
+    }
+
+    private Service getFacebookService() {
+        if (facebookService == null) {
+            facebookService = new FacebookService();
+        }
+        return facebookService;
+    }
+
+    private Request parseRequest(ServletRequest servletRequest) {
         Set<String> arguments = ArgumentName.getLowerValues();
         Request request = new Request();
         Map m = servletRequest.getParameterMap();
@@ -57,22 +88,7 @@ public class Api_v1 implements Filter {
             }
 
         }
-
-        Response response = createResponse(request);
-        request.setResponse(response);
-        history.addRequest(request);
-
-        Gson gson = new GsonBuilder().create();
-
-        servletResponse.setContentType("application/json");
-        String responseAsJSON = gson.toJson(response);
-        String requestAsString = request.toString();
-        String responseAsString = response.toString();
-        servletResponse.getOutputStream().println(responseAsJSON);
-
-        LOG.info("request  as String: " + requestAsString);
-        LOG.info("response as String: " + responseAsString);
-        LOG.info("response as JSON:   " + responseAsJSON);
+        return request;
     }
 
 
@@ -90,34 +106,38 @@ public class Api_v1 implements Filter {
         if (request.getIntent() == null) {
             return new Response("Sorry, I was not able to understand your intention.");
         }
-        Optional<String> whereIdentifier = getOptionalArgumentValue(request, ArgumentName.WHERE);
-        Optional<String> sinceIdentifier = getOptionalArgumentValue(request, ArgumentName.SINCE);
+        Optional<String> whereOptionalArgumentValue = getOptionalArgumentValue(request, ArgumentName.WHERE);
+        Optional<String> sinceOptionalArgumentValue = getOptionalArgumentValue(request, ArgumentName.SINCE);
         int thisKindOfResponseCount = getThisKindOfResponseCount(request);
         request.addArgument(ArgumentName.FAKED_UPDATE, String.valueOf(thisKindOfResponseCount));
         switch (request.getIntent()) {
             case UPDATE:
-                Optional<String> whereSpecifier = whereIdentifier.isPresent() && StringUtils.isNoneBlank(whereIdentifier.get()) ? Optional.of("on " + whereIdentifier.get()) : Optional.empty();
+                Optional<String> whereSpecifier = whereOptionalArgumentValue.isPresent() && StringUtils.isNoneBlank(whereOptionalArgumentValue.get()) ? Optional.of("on " + whereOptionalArgumentValue.get()) : Optional.empty();
                 String updateResponseText = "";
                 if (thisKindOfResponseCount % 3 == 0) {
                     updateResponseText = "You lost an important follower " + whereSpecifier.orElse("") + " - Steve Gates but hey, there are 10 new ones.";
                 } else if (thisKindOfResponseCount % 3 == 1) {
                     updateResponseText = "Oh no, now Elon Wonzniak has left you " + whereSpecifier.orElse("") + " too, you really should be more careful about your " +
-                            (whereIdentifier.isPresent() ? (whereIdentifier.get().equalsIgnoreCase("twitter") ? "tweets" : "posts") : "tweets") + " Donald.";
+                            (whereOptionalArgumentValue.isPresent() ? (whereOptionalArgumentValue.get().equalsIgnoreCase("twitter") ? "tweets" : "posts") : "tweets") + " Donald.";
                 } else if (thisKindOfResponseCount % 3 == 2) {
                     updateResponseText = "You managed not too loose important followers since the last time, well done. And I got even more good news for you. "
                             + "The serial you tweeted about lately - House of Sticks - has lunched a new season on Netflix. Should I cancel your meetings for today?";
                 }
                 return new Response(updateResponseText);
             case FOLLOWER_COUNT:
-
                 int followerCount;
-                if (!whereIdentifier.isPresent()) {
-                    followerCount = service.followerCount(whereIdentifier, sinceIdentifier);
+                if (!whereOptionalArgumentValue.isPresent()) {
+                    // use crowed tangle
+                    followerCount = getCrowdTangleService().directContactCount(whereOptionalArgumentValue, sinceOptionalArgumentValue);
                 } else {
+                    String where = whereOptionalArgumentValue.get();
+                    if ("facebook".equalsIgnoreCase(where)) {
+                        followerCount = getFacebookService().directContactCount(whereOptionalArgumentValue, sinceOptionalArgumentValue);
+                    }
                     Random random = new Random();
                     followerCount = random.nextInt(10000000);
                 }
-                String followerCountResponseText = getFollowerCountResponseText(followerCount, thisKindOfResponseCount, whereIdentifier, sinceIdentifier);
+                String followerCountResponseText = getFollowerCountResponseText(followerCount, thisKindOfResponseCount, whereOptionalArgumentValue, sinceOptionalArgumentValue);
                 Response response = new Response(followerCountResponseText);
                 response.addResponseArgument(new ResponseArgument(ResponseArgumentName.COUNT, String.valueOf(followerCount)));
                 return response;
@@ -261,7 +281,7 @@ public class Api_v1 implements Filter {
 
     @Override
     public void destroy() {
-
+        LOG.debug("destroy()");
     }
 
 }
