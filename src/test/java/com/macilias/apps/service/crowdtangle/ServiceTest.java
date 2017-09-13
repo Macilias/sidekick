@@ -11,9 +11,9 @@ public class ServiceTest {
 
     @Test
     public void testFollowerCountReturnsNumberGreaterThanOrEqualToZero() throws IOException {
-        Service service = new Service(new Client(Settings.CROWD_TANGLE_API_TOKEN), Settings.CROWD_TANGLE_LIST_ID);
+        CrowdTangleService service = new CrowdTangleService(new Client(Settings.CROWD_TANGLE_API_TOKEN), Settings.CROWD_TANGLE_LIST_ID);
 
-        Assert.assertTrue("no, its not right",service.followerCount(Optional.empty(), Optional.empty()) > 0);
+        Assert.assertTrue("no, its not right",service.directContactCount(Optional.empty(), Optional.empty()) > 0);
     }
 
 }

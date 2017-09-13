@@ -1,5 +1,7 @@
 package com.macilias.apps.view;
 
+import com.macilias.apps.service.EmbeddedDb;
+import org.apache.jena.fuseki.embedded.FusekiServer;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.protocol.http.WebApplication;
 
@@ -8,13 +10,14 @@ import org.apache.wicket.protocol.http.WebApplication;
  */
 public class WicketApplication extends WebApplication
 {
+	FusekiServer db;
 	/**
 	 * @see org.apache.wicket.Application#getHomePage()
 	 */
 	@Override
 	public Class<? extends WebPage> getHomePage()
 	{
-		return HomePage.class;
+		return ApiTestPage.class;
 	}
 
 	/**
@@ -24,7 +27,14 @@ public class WicketApplication extends WebApplication
 	public void init()
 	{
 		super.init();
-
+		db = EmbeddedDb.getServer();
+		db.start();
 		// add your configuration here
+	}
+
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		db.stop();
 	}
 }

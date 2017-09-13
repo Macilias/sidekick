@@ -1,22 +1,31 @@
 package com.macilias.apps.service.crowdtangle;
 
-import com.google.gson.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.macilias.apps.model.Settings;
+import com.macilias.apps.service.Service;
 
 import java.io.IOException;
 import java.net.URL;
 import java.util.Optional;
 
-public class Service {
+public class CrowdTangleService implements Service {
 
     private final Client client;
     private final String listId;
 
-    public Service(Client client, String listId) {
+    public CrowdTangleService() {
+        this.client = new Client(Settings.CROWD_TANGLE_API_TOKEN);
+        this.listId = Settings.CROWD_TANGLE_LIST_ID;
+    }
+
+    public CrowdTangleService(Client client, String listId) {
         this.client = client;
         this.listId = listId;
     }
 
-    public int followerCount(Optional<String> where, Optional<String> since) throws IOException {
+    public int directContactCount(Optional<String> where, Optional<String> since) throws IOException {
         JsonObject json = client.get(new URL("https://api.crowdtangle.com/leaderboard?listId=" + listId));
 
         JsonObject result = json.getAsJsonObject("result");
