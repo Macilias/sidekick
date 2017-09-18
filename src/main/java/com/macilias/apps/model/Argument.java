@@ -1,6 +1,10 @@
 package com.macilias.apps.model;
 
+import org.apache.commons.lang3.StringUtils;
+
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Some Description
@@ -10,11 +14,11 @@ import java.util.List;
 public class Argument {
 
     private ArgumentName argumentName;
-    private List<String> argumentValues;
+    private Set<String> argumentValues = new HashSet<>();
 
     public Argument(ArgumentName argumentName, List<String> argumentValues) {
         this.argumentName = argumentName;
-        this.argumentValues = argumentValues;
+        this.argumentValues.addAll(argumentValues);
     }
 
     public ArgumentName getArgumentName() {
@@ -25,12 +29,27 @@ public class Argument {
         this.argumentName = argumentName;
     }
 
-    public List<String> getArgumentValues() {
+    public Set<String> getArgumentValues() {
         return argumentValues;
     }
 
-    public void setArgumentValues(List<String> argumentValues) {
-        this.argumentValues = argumentValues;
+    public boolean containsValue(String other) {
+        return argumentValues.contains(other);
+    }
+
+    public boolean containsAllValues(Set<String> other) {
+        return argumentValues.containsAll(other);
+    }
+
+    public String getDefaultValue() {
+        if (argumentValues.size() == 1) {
+            return argumentValues.iterator().next();
+        }
+        return null;
+    }
+
+    public String getValuesAsString() {
+        return StringUtils.join(getArgumentValues(), ", ");
     }
 
     @Override

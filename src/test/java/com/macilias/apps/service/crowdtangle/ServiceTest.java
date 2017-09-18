@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import com.macilias.apps.model.Settings;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class ServiceTest {

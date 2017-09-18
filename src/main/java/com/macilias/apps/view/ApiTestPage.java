@@ -1,5 +1,6 @@
 package com.macilias.apps.view;
 
+import com.macilias.apps.model.History;
 import com.macilias.apps.model.Settings;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -12,11 +13,15 @@ import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.form.Button;
 import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
+import org.apache.wicket.spring.injection.annot.SpringBean;
 
 import java.util.UUID;
 
 public class ApiTestPage extends WebPage {
     private static final long serialVersionUID = 1L;
+
+    @SpringBean(name = "history")
+    History history;
 
     /**
      * A template for creating a nice SPARQL query
@@ -38,7 +43,7 @@ public class ApiTestPage extends WebPage {
         // Add a form with an onSubmit implementation that sets a message
         Form<Void> form = new Form<>("form");
 
-        Button button1 = new Button("create") {
+        Button button1 = new Button("create1") {
             @Override
             public void onSubmit() {
                 info("button1.onSubmit executed");
@@ -47,7 +52,7 @@ public class ApiTestPage extends WebPage {
         };
         form.add(button1);
 
-        Button button2 = new Button("query") {
+        Button button2 = new Button("query1") {
             @Override
             public void onSubmit() {
                 info("button2.onSubmit executed");
@@ -56,6 +61,25 @@ public class ApiTestPage extends WebPage {
         };
         button2.setDefaultFormProcessing(false);
         form.add(button2);
+
+        Button button3 = new Button("create2") {
+            @Override
+            public void onSubmit() {
+                info("button3.onSubmit executed");
+                history.performWrite();
+            }
+        };
+        form.add(button3);
+
+        Button button4 = new Button("query2") {
+            @Override
+            public void onSubmit() {
+                info("button4.onSubmit executed");
+                history.performRead();
+            }
+        };
+        button4.setDefaultFormProcessing(false);
+        form.add(button4);
 
         add(form);
 
@@ -67,16 +91,17 @@ public class ApiTestPage extends WebPage {
         System.out.println(String.format("Adding %s", id));
         UpdateProcessor upp = UpdateExecutionFactory.createRemote(
                 UpdateFactory.create(String.format(UPDATE_TEMPLATE, id)),
-                "http://localhost:"+ Settings.FUSEKI_PORT+"/ds/update");
+                "http://localhost:" + Settings.FUSEKI_PORT + "/ds/update");
         upp.execute();
     }
 
     private void queryTheCollection() {
         //Query the collection, dump output
         QueryExecution qe = QueryExecutionFactory.sparqlService(
-                "http://localhost:"+ Settings.FUSEKI_PORT+"/ds/query", "SELECT * WHERE {?x ?r ?y}");
+                "http://localhost:" + Settings.FUSEKI_PORT + "/ds/query", "SELECT * WHERE {?x ?r ?y}");
         ResultSet results = qe.execSelect();
         ResultSetFormatter.out(System.out, results);
         qe.close();
     }
+
 }

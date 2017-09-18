@@ -8,6 +8,8 @@ import com.macilias.apps.service.crowdtangle.CrowdTangleService;
 import com.macilias.apps.service.facebook.FacebookService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+import org.apache.wicket.spring.injection.annot.SpringBean;
+import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import javax.servlet.*;
 import java.io.IOException;
@@ -23,13 +25,17 @@ public class SidekickAPI_v1 implements Filter {
 
     private static final Logger LOG = Logger.getLogger(SidekickAPI_v1.class);
     private static final String INTENT = "Intent";
-    private final History history = new History();
+    @SpringBean(name = "history")
+    private History history;
     private Service crowdTangleService;
     private Service facebookService;
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
         LOG.debug("init() " + filterConfig);
+        history = WebApplicationContextUtils.
+                getRequiredWebApplicationContext(filterConfig.getServletContext()).
+                getBean(History.class);
     }
 
     @Override
@@ -137,7 +143,7 @@ public class SidekickAPI_v1 implements Filter {
                     Random random = new Random();
                     followerCount = random.nextInt(10000000);
                 }
-                String followerCountResponseText = getFollowerCountResponseText(followerCount, thisKindOfResponseCount, whereOptionalArgumentValue, sinceOptionalArgumentValue);
+                String followerCountResponseText = getFollowerCountResponseText(followerCount, thisKindOfResponseCount, request.getOptionalArgument(ArgumentName.WHERE), request.getOptionalArgument(ArgumentName.SINCE));
                 Response response = new Response(followerCountResponseText);
                 response.addResponseArgument(new ResponseArgument(ResponseArgumentName.COUNT, String.valueOf(followerCount)));
                 return response;
@@ -153,15 +159,15 @@ public class SidekickAPI_v1 implements Filter {
 
     private int getThisKindOfResponseCount(Request request) {
         int thisKindOfResponseCount = 0;
-        Optional<Request> lastRequestByIntent = history.getLastRequestByIntent(request.getIntent(), Optional.of(ArgumentName.FAKED_UPDATE));
+        Optional<Request> lastRequestByIntent = history.getLastMatchingRequest(request.getIntent(), null, Arrays.asList(ArgumentName.FAKED_UPDATE), false);
         if (lastRequestByIntent.isPresent()) {
             LOG.info("last request has been found checking for optional argument");
             Optional<Argument> optionalArgument = lastRequestByIntent.get().getOptionalArgument(ArgumentName.FAKED_UPDATE);
             if (optionalArgument.isPresent()) {
                 Argument argument = optionalArgument.get();
-                thisKindOfResponseCount = Integer.valueOf(argument.getArgumentValues().get(0));
+                thisKindOfResponseCount = Integer.valueOf(argument.getDefaultValue());
                 thisKindOfResponseCount++;
-                LOG.info("raising thisKindOfResponseCount was " + argument.getArgumentValues().get(0) + " now its " + thisKindOfResponseCount);
+                LOG.info("raising thisKindOfResponseCount was " + argument.getDefaultValue() + " now its " + thisKindOfResponseCount);
             } else {
                 LOG.info("not raising thisKindOfResponseCount - no optional argument found");
             }
@@ -171,10 +177,10 @@ public class SidekickAPI_v1 implements Filter {
         return thisKindOfResponseCount;
     }
 
-    private String getFollowerCountResponseText(int count, int variation, Optional<String> whereIdentifier, Optional<String> sinceIdentifier) {
-        Optional<String> whereSpecifier = whereIdentifier.isPresent() && StringUtils.isNoneBlank(whereIdentifier.get()) ? Optional.of(" on " + whereIdentifier.get()) : Optional.empty();
-        Optional<String> sinceSpecifier = sinceIdentifier.isPresent() && StringUtils.isNoneBlank(sinceIdentifier.get()) ? Optional.of(" since " + sinceIdentifier.get()) : Optional.empty();
-        Optional<Request> lastRequestByIntent = history.getLastRequestByIntent(Intent.FOLLOWER_COUNT, Optional.of(ArgumentName.WHERE));
+    private String getFollowerCountResponseText(int count, int variation, Optional<Argument> whereArgument, Optional<Argument> sinceArgument) {
+        Optional<String> whereSpecifier = whereArgument.isPresent() && StringUtils.isNoneBlank(whereArgument.get().getValuesAsString()) ? Optional.of(" on " + whereArgument.get().getValuesAsString()) : Optional.empty();
+        Optional<String> sinceSpecifier = sinceArgument.isPresent() && StringUtils.isNoneBlank(sinceArgument.get().getValuesAsString()) ? Optional.of(" since " + sinceArgument.get().getValuesAsString()) : Optional.empty();
+        Optional<Request> lastRequestByIntent = history.getLastMatchingRequest(Intent.FOLLOWER_COUNT, Arrays.asList(whereArgument.orElse(null), sinceArgument.orElse(null)), null, false);
         String responseText;
         Optional<Integer> lastCountOptional = getLastCount(lastRequestByIntent);
         LOG.info("getFollowerCountResponseText(): its " + variation + "th variation" + (lastCountOptional.isPresent() ? " - last count was " + lastCountOptional.get() : ""));
@@ -277,6 +283,10 @@ public class SidekickAPI_v1 implements Filter {
     private Optional<String> getOptionalArgumentValue(Request request, ArgumentName argumentName) {
         Optional<Argument> optionalArgument = request.getOptionalArgument(argumentName);
         return optionalArgument.map(argument -> StringUtils.join(argument.getArgumentValues(), ", "));
+    }
+
+    public void setHistory(History history) {
+        this.history = history;
     }
 
     @Override

@@ -10,6 +10,11 @@ import java.util.Set;
  */
 public enum ArgumentName {
 
+    /**
+     * POST has 2 Arguments: “WHERE” and “WHAT”
+     * The UPDATE, FOLLOWER_COUNT, GET_COMMENTS & GET_NEWS might have a optional Filter WHERE; no means do it on all.
+     * And one additional optional Argument which applies to all 5, SINCE YYYY-MM-DD otherwise SINCE is equals to last time checked.
+     */
     WHERE, WHAT, SINCE, FAKED_UPDATE;
 
     public static Set<String> getLowerValues() {
