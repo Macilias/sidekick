@@ -19,6 +19,9 @@
 	<listener>
 		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
 	</listener>
+	<listener>
+		<listener-class>com.macilias.apps.model.EmbeddedDb</listener-class>
+	</listener>
 
 	<filter>
 		<filter-name>wicket.your-sidekick</filter-name>

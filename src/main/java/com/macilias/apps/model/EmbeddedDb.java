@@ -5,13 +5,19 @@ import org.apache.jena.fuseki.Fuseki;
 import org.apache.jena.fuseki.embedded.FusekiServer;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
+import org.apache.log4j.Logger;
+
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
 
 /**
  * Some Description
  *
  * @author maciej.niemczyk@voipfuture.com
  */
-public class EmbeddedDb {
+public class EmbeddedDb implements ServletContextListener {
+
+    private static final Logger LOG = Logger.getLogger(EmbeddedDb.class);
 
     FusekiServer server;
     Dataset ds;
@@ -31,6 +37,19 @@ public class EmbeddedDb {
             ds = DatasetFactory.createTxnMem();
         }
         return ds;
+    }
+
+    @Override
+    public void contextInitialized(ServletContextEvent servletContextEvent) {
+        LOG.info("contextInitialized()");
+    }
+
+    @Override
+    public void contextDestroyed(ServletContextEvent servletContextEvent) {
+        LOG.info("contextDestroyed() stopping the db");
+        if (server != null) {
+            server.stop();
+        }
     }
 
     public static void silance() {

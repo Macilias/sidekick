@@ -139,9 +139,10 @@ public class SidekickAPI_v1 implements Filter {
                     String where = whereOptionalArgumentValue.get();
                     if ("facebook".equalsIgnoreCase(where)) {
                         followerCount = getFacebookService().directContactCount(whereOptionalArgumentValue, sinceOptionalArgumentValue);
+                    } else {
+                        Random random = new Random();
+                        followerCount = random.nextInt(10000000);
                     }
-                    Random random = new Random();
-                    followerCount = random.nextInt(10000000);
                 }
                 String followerCountResponseText = getFollowerCountResponseText(followerCount, thisKindOfResponseCount, request.getOptionalArgument(ArgumentName.WHERE), request.getOptionalArgument(ArgumentName.SINCE));
                 Response response = new Response(followerCountResponseText);
